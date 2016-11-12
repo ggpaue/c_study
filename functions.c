@@ -43,6 +43,42 @@ float average(float array[10]) {
 	return aver;
 }
 
+
+
+int fun1(int m) {
+	int n = 0;
+
+	for(int i = 1; i <= m; i++) {
+		int result = i % 7;
+		if(result == 0) {
+			printf("%d, ", i);
+			n++;
+		}
+	}
+	printf("\n");
+	return n;
+}
+
+
+
+int fun2(int a, int b) {
+	int c = 0;
+	
+	int a10 = a / 10;
+	c += a10 * 10;
+	
+	int a1 = a % 10;
+	c += a1 * 1000;
+
+	int b10 = b / 10;
+	c += b10 * 100;
+
+	int b1 = b % 10;
+	c += b1;
+
+	return c;
+}
+
 int main() {
 	//int max(int x, int y);
 	/*
@@ -93,6 +129,7 @@ int main() {
 	printf("the largest number is %d\n it is the %dth number \n", m, n + 1);
 	*/
 
+	/*
 	float average(float array[10]);
 	float score[10], aver;
 	int i;
@@ -104,6 +141,16 @@ int main() {
 
 	aver = average(score);
 	printf("average score is %5.2f\n", aver);
-	
+	*/
+
+	int m = 50;
+	int n = fun1(m);
+	printf("%d\n", n);
+
+	int a = 45, b = 12;
+	int c = fun2(a, b);
+	printf("%d\n", c);
+
+
 	return 0;
 }
