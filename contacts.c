@@ -112,6 +112,115 @@ int view(NODE *head) {
 	return 0;
 }
 
+int search(NODE *head) {
+	if(head -> next == NULL) {
+		printf("the list is empty!\n");
+		return 0;
+	}
+
+	NODE *p1, *p2;
+	p1 = head -> next;
+	p2 = head;
+
+	int i = 0;
+	printf("search by name or phone? (n / p)\n");
+	fflush(stdin);
+	char ch = getchar();
+	if(ch == 'n') {
+		printf("please input the name you want: \n");
+		char na[16];
+		fflush(stdin);
+		gets(na);
+
+		while(p1 != NULL) {
+			if(strcmp(p1 -> info.name, na) == 0) {
+				printf("%s %s\n", p1 -> info.phone, p1 -> info.phone);
+				i = 1;
+			}
+			p2 = p1;
+			p1 = p1 -> next;
+		}
+
+		if(i == 0) {
+			printf("no matched entries!\n");
+			return 0;
+		}
+	} else if(ch == 'p') {
+		printf("please input the phone number: \n");
+		char phone1[32];
+		fflush(stdin);
+		gets(phone1);
+		i = 0;
+
+		while(p1 != NULL) {
+			if(strcmp(p1 -> info.phone, p1 -> info.phone));
+			i = 1;
+		}
+		p2 = p1;
+		p1 = p1 -> next;
+	}
+	if(i == 0) {
+		printf("could not find matched record! \n");
+		return 0;
+	}
+
+	return 0;
+}
+
+int add(NODE *head) {
+	printf("Want to add a new contact? \n");
+	char ch;
+	ch = getchar();
+	if(ch == 'Y' || ch == 'y') {
+		NODE *p1;
+		while(ch == 'y' || ch == 'Y') {
+			p1 = (NODE *)malloc(sizeof(NODE));
+			printf("please input name: \n");
+			fflush(stdin);
+			scanf("%s", p1 -> info.name);
+			printf("please input phone number: \n");
+			fflush(stdin);
+			scanf("%s", p1 -> info.phone);
+
+			p1 -> next = head -> next;
+			head -> next = p1;
+
+			printf("want to add more contacts? \n");
+			fflush(stdin);
+			ch = getchar();
+		}
+		return 0;
+	}
+	return 0;
+}
+
+int save(NODE *head) {
+	NODE *p1;
+	p1 = head -> next;
+
+	FILE *fp;
+	fp = fopen("list.dat", "w");
+	
+	if(fp == NULL) {
+		printf("failed to open file\n");
+		return 0;
+	}
+
+	if(head -> next == NULL) {
+		printf("contacts are empty!\n");
+		return 0;
+	}
+
+	while(p1 != NULL) {
+		fwrite(p1, sizeof(p1 -> info), 1, fp);
+		p1 = p1 -> next;
+	}
+
+	fclose(fp);
+	printf("save successfully! \n");
+	return 0;
+}
+
 void main() {
 	
 }
