@@ -4,7 +4,10 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-/*
+
+#define ICMP_SIZE (sizeof(struct icmp))
+#define BUF_SIZE 1024
+#define NUM    5
 struct icmp {
 	unsigned char type;
 	unsigned char code;
@@ -29,7 +32,13 @@ struct ip {
 	struct in_addr ipsrc;
 	struct in_addr ipdst;
 };
-*/
+
+char buf[BUF_SIZE] = {0};
+
+USHORT checkSum(USHORT *, int);
+float timediff(struct timeval *, struct timeval *);
+void pack(struct icmp *, int);
+int unpack(char *, int, char *);
 /*
 struct hostent {
 	char *h_name;
@@ -58,7 +67,59 @@ unsigned short checkSum(unsigned short *addr, int len) {
 	return (unsigned short) ~sum;
 }
 
+float timediff(struct timeval *begin, struct timeval *end) {
+	int n;
+
+	n = (end -> tv_sec - begin->tv_sec) * 1000000 
+		+ (end -> tv_usec - begin -> tv_usec);
+
+	return (float)(n / 1000);
+}
+
+void pack(struct icmp *icmp, int sequence)
+
 int main(int argc, char *argv[]) {
+	
+	struct hostent *host;
+	struct icmp sendicmp;
+	struct sockaddr_in from;
+	struct scokaddr_in to;
+
+	int fromlen = 0;
+	int sockfd;
+
+	int nsend = 0;
+	int nreceived = 0;
+	int i, n;
+	in_addr_t inaddr;
+
+	memset(&from, 0, sizeof(struct sockaddr_in));
+	memset(&to, 0, sizeof(struct sockaddr_in));
+
+	if(argc < 2) {
+		printf("use: %s hostname / IP address \n", argv[0]);
+		exit(1);
+	}
+
+	if((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {
+		printf("socket() error \n");
+		exit(1);
+	}
+
+	to.sin_family = AF_INET;
+
+	if(inaddr = inet_addr(argv[1]) == INADDR_NONE) {
+		if((host = gethostbyname(argv[1])) == NULL) {
+			printf("gethostbyname() error \n");
+			exit(1);
+		}
+		to.sin_addr = *(struct in_addr *)host -> h_addr_list[0];
+	} else {
+		to.sin_addr.s_addr = inaddr;
+	}
+
+	printf("ping %s (%s) : %d bytes of data. \n", argv[1], inet_ntoa(to.sin_addr), (int)ICMP_SIZE);
+	
 	/*
 	unsigned short hosts = 0x1234;
 	unsigned short nets;
@@ -103,10 +164,10 @@ int main(int argc, char *argv[]) {
 	printf("%#lx -> %s \n", (long)addr1.s_addr, buf);
 	printf("%#lx -> %s \n", (long)addr2.s_addr, str2);
 	*/
-
+	/*
 	int i;
-	struct hostent *host;
-
+	
+	
 	if(argc < 2) {
 		printf("Use: %s <hostname> \n", argv[0]);
 		exit(1);
@@ -118,6 +179,6 @@ int main(int argc, char *argv[]) {
 		printf("IP address %d : %s \n", i+1, 
 			inet_ntoa(*(struct in_addr *)host-> h_addr_list[i]));
 	}
-
+	*/
 	return 0;
 }
