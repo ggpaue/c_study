@@ -3,11 +3,19 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 
 #define ICMP_SIZE (sizeof(struct icmp))
+#define ICMP_ECHO  8
+#define ICMP_ECHOREPLY  0
 #define BUF_SIZE 1024
 #define NUM    5
+
+#define UCHAR  unsigned char
+#define USHORT unsigned short
+#define UINT   unsigned int
+
 struct icmp {
 	unsigned char type;
 	unsigned char code;
@@ -20,25 +28,37 @@ struct icmp {
 };
 
 struct ip {
-	unsigned char version: 4;
-	unsigned char hlen: 4;
-	unsigned char tos;
-	unsigned short len;
-	unsigned short id;
-	unsigned short offset;
-	unsigned char ttl;
-	unsigned char protocol;
-	unsigned short checksum;
+	
+	#if __BYTE_ORDER == __LITTLE_ENDIAN
+	UCHAR hlen: 4;
+	UCHAR version: 4;
+	#endif
+
+	#if __BYTE_ORDER == __BIG_ENDIAN
+	UCHAR version: 4;
+	UCHAR hlen: 4;
+	#endif
+
+	UCHAR tos;
+	USHORT len;
+	USHORT id;
+	USHORT offset;
+	UCHAR ttl;
+	UCHAR protocol;
+	USHORT checksum;
+
 	struct in_addr ipsrc;
 	struct in_addr ipdst;
 };
 
 char buf[BUF_SIZE] = {0};
 
+/*
 USHORT checkSum(USHORT *, int);
 float timediff(struct timeval *, struct timeval *);
 void pack(struct icmp *, int);
 int unpack(char *, int, char *);
+*/
 /*
 struct hostent {
 	char *h_name;
@@ -76,7 +96,40 @@ float timediff(struct timeval *begin, struct timeval *end) {
 	return (float)(n / 1000);
 }
 
-void pack(struct icmp *icmp, int sequence)
+void pack(struct icmp *icmp, int sequence) {
+	icmp -> type = ICMP_ECHO;
+	icmp -> code = 0;
+	icmp -> checksum = 0;
+	icmp -> id = getpid();
+	icmp -> sequence = sequence;
+	gettimeofday(&icmp -> timestamp, 0);
+	icmp -> checksum = checkSum((USHORT *)icmp, ICMP_SIZE);
+}
+
+int unpack(char *buf, int len, char *addr) {
+	int i, ipheadlen;
+	struct ip *ip;
+	struct icmp *icmp;
+	float rtt;
+	struct timeval end;
+
+	ip = (struct ip *)buf;
+
+	ipheadlen = ip -> hlen << 2;
+	icmp = (struct icmp *)(buf + ipheadlen);
+
+	len -= ipheadlen;
+
+	if(len < 8) {
+		printf("ICMP packets\'s length is less that 8 \n");
+		return -1;
+	}
+
+	if(icmp -> type != ICMP_ECHOREPLY || icmp -> id != getpid()) {
+		printf("ICMP pakcets are not sent by us \n");
+		return -1;
+	}
+}
 
 int main(int argc, char *argv[]) {
 	
@@ -120,6 +173,32 @@ int main(int argc, char *argv[]) {
 
 	printf("ping %s (%s) : %d bytes of data. \n", argv[1], inet_ntoa(to.sin_addr), (int)ICMP_SIZE);
 	
+	for(i = 0; i < NUM; i++) {
+		nsend++;
+		memset(&sendicmp, 0, ICMP_SIZE);
+		pack(&sendicmp, nsend);
+
+		if(sendto(sockfd, &sendicmp, ICMP_SIZE, 0, (struct sockaddr *)&to, sizeof(to)) == -1) {
+			printf("sendto() error \n");
+			continue;
+		}
+
+		if((n = recvfrom(sockfd, buf, BUF_SIZE, 0, (struct sockaddr *)&from, &fromlen)) < 0) {
+			printf("recvfrom() error \n");
+			continue;
+		}
+		nreceived++;
+
+		if(unpack(buf, n, inet_ntoa(from.sin_addr)) == -1) {
+			printf("unpack() error \n");
+		}
+
+		sleep(1);
+	}
+
+	printf("---- %s ping statistics ----\n", argv[1]);
+	printf("%d packets transmitted, %d received, %%%d packet loss \n", nsend, nreceived,
+		(nsend - nreceived) / nsend * 100);
 	/*
 	unsigned short hosts = 0x1234;
 	unsigned short nets;
