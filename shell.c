@@ -3,10 +3,29 @@
 #include <signal.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 
 #define MAX 1024
 #define MAX_COMM  100
+
+char cwd[MAX];
+char *all[MAX];
+
+int current_out = 4;
+int current_in = 5;
+int fd[4];
+
+typedef struct proc {
+	pid_t pid;
+	int status;
+	char *arg[MAX_COMM];
+	struct proc *next;
+}proc;
+
+proc *start;
+
 void sig_handle(int sig) {
 	if(sig == 2) {
 		printf("\nInstead of Ctrl-C type quit\n");
@@ -75,6 +94,55 @@ void cd(char *arg) {
 	}
 }
 
+void bg_signal_handle() {
+	int status;
+	pid_t pid;
+	pid = waitpid(-1, &status, WNOHANG);
+	proc *iterate;
+	iterate = start;
+	while(iterate != NULL) {
+		if(iterate -> pid == getpid()) {
+			bg_struct_handle(pid, NULL, 1);
+		}
+	}
+}
+
+void bg_struct_handle(pid_t pid, char *arg[], int type) {
+	proc *iterate *new;
+	if(type == 0) {
+		if(start == NULL) {
+			start = (proc *)malloc(sizeof(proc));
+			start -> pid = pid;
+			start -> status = 1;
+			start -> next = NULL;
+			int i = 0;
+			while(arg[i] != NULL) {
+				start -> arg[i] = malloc(MAX_COMM * sizeof(char));
+				strcpy(start -> arg[i], arg[i]);
+				i += 1;
+			}
+			start -> arg[i] = NULL;
+		} else {
+			new = (proc *)malloc(sizeof(proc));
+			new -> pid = pid;
+			new -> status = 1;
+			new -> next = NULL;
+			int i = 0;
+			while(arg[i] != NULL) {
+				new -> arg[i] = malloc(MAX_COMM * sizeof(char));
+				strcpy(new -> arg[i], arg[i]);
+				i += 1;
+			}
+			new -> arg[i] = NULL;
+			iterate = start;
+			while(iterate -> next != NULL) {
+				iterate = iterate -> next;
+			}
+			iterate -> next = new;
+		}
+	}
+}
+
 void execute(char *command) {
 	char *arg[MAX_COMM];
 	char *try;
@@ -135,6 +203,40 @@ void file_in(char *arg[], char *in_file, char *out_file, int type) {
 		file_out(arg, out_file, 1);
 	}
 	return;
+}
+
+void bf_exec(char *arg[], int type) {
+	pid_t pid;
+	if(type == 0) {
+		if((pid = fork()) < 0) {
+			printf("Error: forking child process failed \n");
+			return;
+		} else if(pid == 0) {
+			signal(SIGTSTP, SIG_DFL);
+			execvp(arg[0], arg);
+		} else {
+			pid_t c;
+			signal(SIGTSTP, SIG_DFL);
+			c = wait(&pid);
+			dup2(current_out, 1);
+			dup2(current_in, 0);
+			return;
+		}
+	} else {
+		signal(SIGCHLD, bg_signal_handle);
+		if((pid = fork()) < 0) {
+			printf("Error: forking child process failed \n");
+			return;
+		} else if(pid == 0) {
+			int f;
+			execvp(arg[0], arg);
+		} else {
+			bg_struct_handle(pid, arg, 0);
+			dup2(current_out, 1);
+			dup2(current_in, 0);
+			return;
+		}
+	}
 }
 
 int main() {
