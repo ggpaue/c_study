@@ -2,13 +2,22 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <fcntl.h>
+
+#include <sys/utsname.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/ptrace.h>
 
 
 #define MAX 1024
 #define MAX_COMM  100
+
+void print_prompt();
+void bg_struct_handle(pid_t pid, char *arg[], int type);
 
 char cwd[MAX];
 char *all[MAX];
@@ -39,8 +48,8 @@ void sig_handle(int sig) {
 }
 
 void print_prompt() {
-	struct utsname unam_ptr;
-	unmae(&uname_ptr);
+	struct utsname uname_ptr;
+	uname(&uname_ptr);
 
 	getcwd(cwd, sizeof(cwd));
 	setbuf(stdout, NULL);
@@ -108,7 +117,7 @@ void bg_signal_handle() {
 }
 
 void bg_struct_handle(pid_t pid, char *arg[], int type) {
-	proc *iterate *new;
+	proc *iterate, *new;
 	if(type == 0) {
 		if(start == NULL) {
 			start = (proc *)malloc(sizeof(proc));
@@ -140,7 +149,49 @@ void bg_struct_handle(pid_t pid, char *arg[], int type) {
 			}
 			iterate -> next = new;
 		}
+	} else if(type == 1) {
+		proc *preiter = NULL;
+		iterate = start;
+		while(iterate != NULL && iterate -> pid != pid) {
+			preiter = iterate;
+			iterate = iterate -> next;
+		}
+
+		if(iterate == NULL) {
+			printf("No Such Pid! \n");
+			return;
+		} else if(iterate -> pid == pid) {
+			if(preiter == NULL) {
+				start = iterate -> next;
+				free(iterate);
+			} else {
+				preiter -> next = iterate -> next;
+				free(iterate);
+			}
+		}
+	} else if(type == 2) {
+		int i = 1, a = 0;
+		iterate = start;
+		if(iterate == NULL) {
+			printf("No background jobs \n");
+			return;
+		}
+
+		while(iterate != NULL) {
+			a = 0;
+			setbuf(stdout, NULL);
+			printf("[%d]\n", i);
+			
+			while(iterate -> arg[a] != NULL) {
+				printf("%s\n", iterate -> arg[a]);
+				a += 1;
+			}
+			printf("[%d]\n", iterate -> pid);
+			i += 1;
+			iterate = iterate -> next;
+		}
 	}
+	return;
 }
 
 void execute(char *command) {
@@ -163,14 +214,51 @@ void execute(char *command) {
 
 	while(1) {
 		try = parse(command, 1);
-		if(try == NULL) break;
-
-		else if(strcmp(try, ">") == 0) {
+		if(try == NULL) {
+			break;
+		} else if(strcmp(try, ">") == 0) {
 			try = parse(command, 1);
 			file_out(arg, try, 0);
 			return;
+		} else if(strcmp(try, ">>") == 0) {
+			try = parse(command, 1);
+			file_out(arg, try, 1);
+			return;
+		} else if(strcmp(try, "<") == 0) {
+			try = parse(command, 1);
+			char *out_file = parse(command, 1);
+			if(out_file != NULL) {
+				if(strcmp(out_file, ">") == 0) {
+					out_file = parse(command, 1);
+					if(out_file == NULL) {
+						printf("Syntax error! \n");
+						return;
+					} else {
+						file_in(arg, try, out_file, 1);
+					}
+				} else if(strcmp(out_file, ">>") == 0) {
+					out_file = parse(command, 1);
+					if(out_file == NULL) {
+						printf("Syntax error!\n");
+						return;
+					} else {
+						file_in(arg, try, out_file, 2);
+					}
+				} 
+			} else {
+				file_in(arg, try, NULL, 0);
+			}
+		} else if(strcmp(try, "&") == 0) {
+			bf_exec(arg, 1);
+			return;
+		} else {
+			arg[t] = try;
+			t += 1;
+			arg[t] = NULL;
 		}
 	}
+	bf_exec(arg, 0);
+	return;
 }
 
 void file_out(char *arg[], char *out_file, int type) {
@@ -244,13 +332,14 @@ int main() {
 	int iter = 0;
 
 	command = (char *)malloc(MAX+1);
+	chdir("/home/test");
 
 	while(1) {
 		iter = 0;
 		signal(SIGINT, sig_handle);
 		signal(SIGQUIT, sig_handle);
 		signal(SIGCHLD, sig_handle);
-		signal(SIGTSTP, SIG_IGN);
+		signal(SIGTSTP, SIG_IGN); 
 
 		print_prompt();
 
