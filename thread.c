@@ -1,4 +1,7 @@
-
+#include <stdio.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 int array_length, file_length;
