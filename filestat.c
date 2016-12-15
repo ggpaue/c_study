@@ -1,4 +1,20 @@
-   struct stat {
+#include <dirent.h>
+#include <limits.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define FTW_F   1
+#define FTW_D   2
+#define FTW_DNR 3
+#define FTW_NS  4
+
+static char *fullpath;
+static size_t pathlen; 
+
+struct stat {
 	dev_t         st_dev;
 	ino_t         st_ino;
 	mode_t        st_mode;
@@ -15,6 +31,8 @@
 	char          st_fstype[_ST_FSTYSZ];    
 	
 };
+
+static long nreg, ndir, nblk, nchr, nfifo, nslink, nsock, ntot;
 
 static int dopath(Myfunc *func) {
 	struct stat statbuf;
@@ -78,8 +96,48 @@ static int myftw(char *pathname, Myfunc *func) {
 	return (dopath(func));
 }
 
+static int myfunc(const char *pathname, const struct stat *statptr, int type) {
+	switch(type) {
+		case FTW_F:
+			switch(statptr -> st_mode & S_IFMT) {
+				case S_IFREG: 
+					nreg++;
+					break;
+				case S_IFBLK:
+					nblk++;
+					break;
+				case IF_DIR:
+					printf("for S_IFDIR for %s", pathname);
+			}
+			break;
 
-static long nreg, ndir, nblk, nchr, nfifo, nslink, nsock, ntot;
+		case FTW_D:
+			ndir++;
+			break;
+
+		case FTW_DNR:
+			printf("%s path not recognized", pathname);
+
+		case FTW_NS:
+			printf("%s stat is wrong", pathname);
+
+		default:
+			printf("%d category not recognized, pathname: %s", type, pathname);
+	}
+	return 0;
+}
+
+char *path_alloc(size_t *size) {
+	char *p = NULL;
+	if(!size) return NULL;
+	p = malloc(256);
+	if(p) {
+		*size = 256
+	} else {
+		*size = 0;
+	}
+	return p;
+}
 
 int main(int argc, char *argv[]) {
 	int ret;
