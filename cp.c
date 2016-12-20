@@ -116,5 +116,89 @@ int copyD2D(char *src_dir, char *dest_dir) {
 }
 
 int main(int argc, char **argv) {
-	 
+	 bool opt_r = false;
+	 bool opt_l = false;
+	 bool opt_s = false;
+	 char *src = NULL;
+	 char *dest = NULL;
+
+	 char c;
+	 while((c = getopt(argc, acgv, "rRls")) != -1) {
+	 	switch (c) {
+	 		case 'R':
+	 		case 'r':
+	 			opt_r = true;
+	 			break;
+	 		case 'l':
+	 			opt_l = true;
+	 			break;
+	 		case 's':
+	 			opt_s = true;
+	 			break;
+	 	}
+	 }
+
+	 if(otpind >= argc - 1) {
+	 	printf("missing operation command!\n");
+	 	exit(1);
+	 }
+
+	 src = argv[otpind];
+	 dest = argv[otpind + 1];
+
+	 if(opt_l) {
+	 	if(isdir(src)) {
+	 		printf("can not link directory \n");
+	 		exit(1);
+	 	}
+
+	 	if((link(src, dest)) == 0) {
+	 		return 0;
+	 	} else {
+	 		printf("link directory failed \n");
+	 		exit(1);
+	 	}
+	 }
+
+	 if(opt_s) {
+	 	if(isdir(src)) {
+	 		printf("can not create directory link\n");
+	 		exit(1); 
+	 	}
+
+	 	if((symlink(src, dest)) == 0) {
+	 		return 0;
+	 	} else {
+	 		printf("failed to create directory link\n");
+	 		exit(1);
+	 	}
+	 }
+
+	 if(!isdir(src)) {
+	 	if((copyF2F(src, dest)) == 0) {
+	 		return 0;
+	 	} else {
+	 		printf("failed to copy file \n");
+	 		exit(1);
+	 	}
+	 } else if(isdir(src)) {
+	 	if(!isdir(dest)) {
+	 		printf("could not copy a directory to a file \n");
+	 		exit(1);
+	 	} else if(isdir(dest) && opt_r) {
+	 		if(copyD2D(src, dest) != 0) {
+	 			printf("failed to copy the directory\n");
+	 			exit(1);
+	 		} else {
+	 			return 0;
+	 		}
+	 	} else {
+	 		printf("please use -r to copy a directory \n");
+	 		exit(1);
+	 	}
+	 } else {
+	 	printf("invalid operation \n");
+	 	exit(1);
+	 }
+	 return 0;
 }
