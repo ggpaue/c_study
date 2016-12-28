@@ -142,7 +142,7 @@ int main() {
 
 	strcmp("Chengdu", "Beijing");
 	*/
-
+	/*
 	char string[30];
 	char ch[3][30];
 	int i;
@@ -157,5 +157,10 @@ int main() {
 		}
 	}
 	printf("the result is: \n%s\n", string);
+	*/
+
+	const char *sn = "Hello";
+	char *result = strdup(sn);
+	printf("%s\n", result);
 	return 0;
 }

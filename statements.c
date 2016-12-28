@@ -1,6 +1,69 @@
 #include <stdio.h>
+#include <string.h>
 
+typedef struct test {
+	char *sn;
+}rsp_data;
+
+int test(rsp_data *rsp) {
+	rsp -> sn = "hello";
+	return 0;
+}
+
+int test2(rsp_data rsp) {
+	rsp.sn = "world";
+	return 0;
+}
+
+int test3(rsp_data *rsp) {
+	rsp_data rspCopy;
+	rspCopy = *rsp;
+	rspCopy.sn = "world";
+	*rsp = rspCopy;
+
+	return 0;
+}
+
+int result = 0;
+
+void func(int type) {
+	//int result = 0;
+	switch(type) {
+		case 1:
+			printf("%d, %d\n", type, result);
+			break;
+		case 2:
+			result = 100;
+			printf("%d, %d\n", type, result);
+			break;
+		default:
+			result = -100;
+			break;
+			
+	}
+}
 int main() {
+	int type = 2;
+	func(type);
+	type = 1;
+	func(type);
+	/*
+	rsp_data rsp;
+	//memset(&rsp, 0, sizeof(rsp));
+	test(&rsp);
+
+	//char *sn = NULL;
+	
+	printf("sn = %s\n", rsp.sn);
+
+
+	test2(rsp);
+	printf("sn = %s\n", rsp.sn);
+
+	test3(&rsp);
+	printf("sn = %s\n", rsp.sn);
+	*/
+	//printf("rsp.sn = %s\n", rsp.sn);
 	/*
 	for(int j = 0; j <= 8; j++) {
 		if(j == 4) {
@@ -115,7 +178,7 @@ int main() {
 		}
 		printf("\n");
 	}*/
-
+	/*
 	int i, j , n = 0;
 	for(i = 1; i <= 7; i++) {
 		for(j = 1; j <= 7; j++, n++) {
@@ -123,5 +186,8 @@ int main() {
 			printf("*");
 		}
 	}
+	*/
+
+
 	return 0;
 }

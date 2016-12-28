@@ -129,7 +129,7 @@ void print_tcp_header(unsigned char *buf, int size, t_sniffer *sniffer) {
 
 	fprintf(sniffer -> logfile, "\n");
 	fprintf(sniffer -> logfile, "TCP Header\n");
-	fprintf(sniffer -> logfile, "Source Port: %u\n", ntohs(tcph -> source));
+	fprintf(sniffer -> logfile, "Source Port: %u\n", ntohs(tcph -> source));      
 }
 
 void printData(unsigned char *buf, int size, t_sniffer *sniffer) {
