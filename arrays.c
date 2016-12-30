@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <bsd/string.h>
 
 int main() {
 	/*
@@ -158,9 +159,18 @@ int main() {
 	}
 	printf("the result is: \n%s\n", string);
 	*/
-
+	/*
 	const char *sn = "Hello";
 	char *result = strdup(sn);
 	printf("%s\n", result);
+	*/
+
+	char *sn = "FTKMOB6B6BBA44E2";
+
+	char buf[16];
+
+	strlcpy(buf, sn, sizeof(buf) + 1);
+	printf("%s\n", buf);
+
 	return 0;
 }
