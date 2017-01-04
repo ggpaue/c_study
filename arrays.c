@@ -1,6 +1,32 @@
 #include <stdio.h>
 #include <string.h>
-#include <bsd/string.h>
+//#include <bsd/string.h>
+
+
+size_t strlcpy(dst, src, siz)
+	char *dst;
+	const char *src;
+	size_t siz;
+{
+	int ret;
+
+	if (src == NULL)
+		return 0;
+	if (dst == NULL || siz == 0)
+		return strlen(src);
+
+	ret = strlen(src);
+	if (ret >= siz)
+	{
+		memcpy(dst, src, siz - 1);
+		dst[siz-1] = '\0';
+	}
+	else
+	{
+		memcpy(dst, src, ret+1);
+	}
+	return ret;
+}
 
 int main() {
 	/*

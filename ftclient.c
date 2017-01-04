@@ -119,3 +119,147 @@ int ftclient_list(int sock_data, int sock_con) {
 	}
 	return 0;
 }
+
+int ftclient_send_cmd(struct command *cmd) {
+	char buffer[MAXSIZE];
+	int rc;
+
+	sprintf(buffer, "%s %s", cmd -> code, cmd -> arg);
+
+	rc = send(sock_control, buffer, (int)strlen(buffer), 0);
+	if(rc < 0) {
+		perror("Error sending command to server");
+		return -1;
+	}
+	return 0;
+}
+
+void ftclient_login() {
+	struct command cmd;
+	char user[256];
+	memset(user, 0, 256);
+
+	printf("Name: ");
+	fflush(stdout);
+	read_input(user, 256);
+
+	strcpy(cmd.code, "USER");
+	strcpy(cmd.arg, user);
+	ftclient_send_cmd(&cmd);
+
+	int wait;
+	recv(sock_control, &wait, sizeof(wait), 0);
+
+	fflush(stdout);
+	char *pass = getpass("Password: ");
+
+	strcpy(cmd.code, "PASS");
+	strcpy(cmd.arg, pass);
+	ftclient_send_cmd(&cmd);
+
+	int retcode = read_reply();
+
+	switch(retcode) {
+		case 430:
+			printf("Invalid username / password. \n");
+			exit(0);
+		case 230:
+			printf("Successful login\n");
+			break;
+		default:
+			perror("error reading message from server");
+			exit(1);
+			break;
+	}
+}
+
+int main(int argc, char *argv[]) {
+	int data_sock, retcode, s;
+	char buffer[MAXSIZE];
+	struct command cmd;
+	struct addrinfo hints, *res, *rp;
+
+	if(argc != 3) {
+		printf("usage: ./ftclient hostname port \n");
+		exit(0);
+	}
+
+	char *host = argv[1];
+	char *port = argv[2];
+
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	s = getaddrinfo(host, port, &hints, &res);
+	if(s != 0) {
+		printf("getaddrinfo() error %s", gai_strerror());
+		exit(1);
+	}
+
+	for(rp = res; rp != NULL; rp = rp -> ai_next) {
+		sock_control = socket(rp -> ai_family, rp -> ai_socktype, rp -> ai_protocol);
+
+		if(sock_control < 0) {
+			continue;
+		}
+
+		if(connect(sock_control, res -> ai_addr, res -> ai_addrlen) == 0) {
+			break;
+		} else {
+			perror("connecting stream socket");
+			exit(1);
+		}
+
+		close(sock_control);
+	}
+	freeaddrinfo(rp);
+
+	printf("Connected to %s. \n", host);
+	print_reply(read_reply());
+
+	ftclient_login();
+
+	while(1) {
+		if(ftclient_read_command(buffer, sizeof(buffer), &cmd) < 0) {
+			printf("Invalid command \n");
+			continue;
+		}
+
+		if(send(sock_control, buffer, (int)strlen(buffer), 0) < 0) {
+			close(sock_control);
+			exit(1);
+		}
+
+		retcode = read_reply();
+
+		if(retcode == 221) {
+			print_reply(221);
+			break;
+		}
+
+		if(retcode == 502) {
+			printf("%d Invalid command. \n", retcode);
+		} else {
+			if((data_sock = ftclient_open_conn(sock_control)) < 0) {
+				perror("Error opening socket for data connection");
+				exit(1);
+			}
+
+			if(strcmp(cmd.code, "LIST") == 0) {
+				ftclient_list(data_sock, sock_control);
+			} else if(strcmp(cmd.code, "RETR") == 0) {
+				if(read_reply() == 550) {
+					print_reply(550);
+					close(data_sock);
+					continue;
+				}
+				ftclient_get(data_sock, sock_control, cmd.arg);
+				print_reply(read_reply);
+			}
+			close(data_sock);
+		}
+	}
+
+	close(sock_control);
+	return 0;
+}
